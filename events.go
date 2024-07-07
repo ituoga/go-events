@@ -20,6 +20,9 @@ var reg = map[string]reflect.Type{}
 // events.Register[*CustomEvent]()
 func Register[T Eventer]() {
 	evt := *new(T)
+	if _, ok := reg[evt.EventName()]; ok {
+		panic("event already registered" + " + " + evt.EventName())
+	}
 	reg[evt.EventName()] = reflect.TypeOf(evt).Elem()
 }
 
