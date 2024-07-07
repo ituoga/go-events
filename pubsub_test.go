@@ -1,6 +1,9 @@
 package events
 
-import "testing"
+import (
+	"encoding/json"
+	"testing"
+)
 
 type localEvent struct {
 	Name string
@@ -8,6 +11,23 @@ type localEvent struct {
 
 func (e *localEvent) EventName() string {
 	return "some.topic.here"
+}
+
+func TestMain(t *testing.T) {
+
+	b, _ := json.Marshal(&localEvent{"testas"})
+	a := []byte("")
+	Before(func(b []byte) {
+		a = b
+	})
+
+	Subscribe(func(e *localEvent) {})
+
+	Publish(&localEvent{"testas"})
+
+	if string(a) != string(b) {
+		t.Fatal("event not received")
+	}
 }
 
 func TestSub(t *testing.T) {

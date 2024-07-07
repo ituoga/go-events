@@ -1,14 +1,28 @@
 package events
 
-import "reflect"
+import (
+	"encoding/json"
+	"errors"
+	"reflect"
+)
+
+var (
+	NoSubscribers = errors.New("No subscribers for this event")
+)
 
 var (
 	// PubSub is the pubsub instance
 	subscribers map[string][]reflect.Value
+
+	beforePub func([]byte)
 )
 
 func init() {
 	subscribers = make(map[string][]reflect.Value)
+}
+
+func Before(fn func([]byte)) {
+	beforePub = fn
 }
 
 // Subscribe subscribes to an event
@@ -37,13 +51,21 @@ func Subscribe(fn any) {
 }
 
 // Publish publishes an event
-func Publish(event Eventer) {
+func Publish(event Eventer) error {
 	if _, ok := subscribers[event.EventName()]; !ok {
-		return
+		return NoSubscribers
+	}
+	if beforePub != nil {
+		b, err := json.Marshal(event)
+		if err != nil {
+			return err
+		}
+		beforePub(b)
 	}
 	for _, fn := range subscribers[event.EventName()] {
 		in := make([]reflect.Value, 1)
 		in[0] = reflect.ValueOf(event)
 		fn.Call(in)
 	}
+	return nil
 }
