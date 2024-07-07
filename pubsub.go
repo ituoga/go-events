@@ -68,7 +68,12 @@ func Publish(event Eventer) error {
 	for _, fn := range subscribers[event.EventName()] {
 		in := make([]reflect.Value, 1)
 		in[0] = reflect.ValueOf(event)
-		fn.Call(in)
+		results := fn.Call(in)
+		if len(results) > 0 {
+			if err, ok := results[len(results)-1].Interface().(error); ok && err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
