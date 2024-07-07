@@ -17,8 +17,9 @@ func TestMain(t *testing.T) {
 
 	b, _ := json.Marshal(&localEvent{"testas"})
 	a := []byte("")
-	Before(func(name string, b []byte, an any) {
+	Before(func(name string, b []byte, an any) error {
 		a = b
+		return nil
 	})
 
 	Subscribe(func(e *localEvent) {})
