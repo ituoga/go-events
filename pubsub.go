@@ -14,14 +14,14 @@ var (
 	// PubSub is the pubsub instance
 	subscribers map[string][]reflect.Value
 
-	beforePub func([]byte)
+	beforePub func(string, []byte, any)
 )
 
 func init() {
 	subscribers = make(map[string][]reflect.Value)
 }
 
-func Before(fn func([]byte)) {
+func Before(fn func(string, []byte, any)) {
 	beforePub = fn
 }
 
@@ -60,7 +60,7 @@ func Publish(event Eventer) error {
 		if err != nil {
 			return err
 		}
-		beforePub(b)
+		beforePub(event.EventName(), b, event)
 	}
 	for _, fn := range subscribers[event.EventName()] {
 		in := make([]reflect.Value, 1)
