@@ -59,7 +59,7 @@ func Subscribe(fn any) {
 
 // Publish publishes an event
 func Publish(event any) error {
-	if _, ok := subscribers[getEventName(event)]; !ok {
+	if _, ok := subscribers[GetEventName(event)]; !ok {
 		return ErrNoSubscribers
 	}
 	if beforePub != nil {
@@ -67,12 +67,12 @@ func Publish(event any) error {
 		if err != nil {
 			return err
 		}
-		err = beforePub(getEventName(event), b, event)
+		err = beforePub(GetEventName(event), b, event)
 		if err != nil {
 			return err
 		}
 	}
-	for _, fn := range subscribers[getEventName(event)] {
+	for _, fn := range subscribers[GetEventName(event)] {
 		in := make([]reflect.Value, 1)
 		in[0] = reflect.ValueOf(event)
 		results := fn.Call(in)
@@ -102,7 +102,7 @@ func Request(event any) (any, error) {
 }
 
 func RequestG[T any](event any) (T, error) {
-	if _, ok := subscribers[getEventName(event)]; !ok {
+	if _, ok := subscribers[GetEventName(event)]; !ok {
 		return *new(T), ErrNoSubscribers
 	}
 	if beforePub != nil {
@@ -110,13 +110,13 @@ func RequestG[T any](event any) (T, error) {
 		if err != nil {
 			return *new(T), err
 		}
-		err = beforePub(getEventName(event), b, event)
+		err = beforePub(GetEventName(event), b, event)
 		if err != nil {
 			return *new(T), err
 		}
 	}
 	var results []reflect.Value
-	for _, fn := range subscribers[getEventName(event)] {
+	for _, fn := range subscribers[GetEventName(event)] {
 		in := make([]reflect.Value, 1)
 		in[0] = reflect.ValueOf(event)
 		results = append(results, fn.Call(in)...)
@@ -173,7 +173,7 @@ func RequestGE[T any](name string, b []byte) (T, error) {
 	return *new(T), errors.New("not implemented")
 }
 
-func getEventName(event any) string {
+func GetEventName(event any) string {
 	if e, ok := event.(Eventer); ok {
 		return e.EventName()
 	}

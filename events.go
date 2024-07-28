@@ -24,10 +24,10 @@ var reg = map[string]reflect.Type{}
 // events.Register[*CustomEvent]()
 func Register[T any]() {
 	evt := *new(T)
-	if _, ok := reg[getEventName(evt)]; ok {
-		panic("event already registered" + " + " + getEventName(evt))
+	if _, ok := reg[GetEventName(evt)]; ok {
+		panic("event already registered" + " + " + GetEventName(evt))
 	}
-	reg[getEventName(evt)] = reflect.TypeOf(evt).Elem()
+	reg[GetEventName(evt)] = reflect.TypeOf(evt).Elem()
 }
 
 // Get returns a new instance of the event from string
@@ -41,7 +41,7 @@ func Get(event string) any {
 }
 
 func GetUnmarshal[T any](body []byte) T {
-	evt := Get(getEventName(*new(T)))
+	evt := Get(GetEventName(*new(T)))
 	err := json.Unmarshal(body, &evt)
 	if err != nil {
 		log.Fatalf("error unmarshalling event: %s", err)

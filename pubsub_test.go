@@ -155,7 +155,7 @@ func TestSystem(t *testing.T) {
 	}
 	s := &system{
 		Auth: "testauth",
-		Func: getEventName(evt),
+		Func: GetEventName(evt),
 		P:    MustMarshal(evt),
 	}
 	b, _ := json.Marshal(s)
