@@ -17,3 +17,7 @@ type ExampleEvent struct{}
 func (e *ExampleEvent) EventName() string {
 	return "ExampleEvent"
 }
+
+type ExampleWithNameEvent struct {
+	Name string
+}

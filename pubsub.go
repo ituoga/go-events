@@ -35,19 +35,26 @@ func Subscribe(fn any) {
 		panic("Handler must take exactly one argument")
 	}
 
-	argType := funcType.In(0)
-	if !argType.Implements(reflect.TypeOf((*Eventer)(nil)).Elem()) {
-		panic("Handler argument must implement MyType interface")
-	}
+	var topic string
 
-	dummyArg := reflect.New(argType.Elem()).Interface().(Eventer)
-	topic := dummyArg.EventName()
+	argType := funcType.In(0)
+	if argType.Implements(reflect.TypeOf((*Eventer)(nil)).Elem()) {
+		dummyArg := reflect.New(argType.Elem()).Interface().(Eventer)
+		topic = dummyArg.EventName()
+		// panic("Handler argument must implement MyType interface")
+	} else {
+		topic = getStructName(argType)
+		if topic == "" {
+			panic("Handler argument must implement Eventer interface or be a struct")
+		}
+	}
 
 	if _, ok := subscribers[topic]; !ok {
-		subscribers[topic] = []reflect.Value{}
+		subscribers[topic] = make([]reflect.Value, 1)
 	}
 
-	subscribers[topic] = append(subscribers[topic], handlerVal)
+	// subscribers[topic] = append(subscribers[topic], handlerVal)
+	subscribers[topic][0] = handlerVal
 }
 
 // Publish publishes an event
@@ -76,4 +83,62 @@ func Publish(event Eventer) error {
 		}
 	}
 	return nil
+}
+
+func Request(event Eventer) (any, error) {
+	return RequestG[any](event)
+}
+
+func RequestG[T any](event any) (T, error) {
+	if _, ok := subscribers[getEventName(event)]; !ok {
+		return *new(T), NoSubscribers
+	}
+	if beforePub != nil {
+		b, err := json.Marshal(event)
+		if err != nil {
+			return *new(T), err
+		}
+		err = beforePub(getEventName(event), b, event)
+		if err != nil {
+			return *new(T), err
+		}
+	}
+	var results []reflect.Value
+	for _, fn := range subscribers[getEventName(event)] {
+		in := make([]reflect.Value, 1)
+		in[0] = reflect.ValueOf(event)
+		results = append(results, fn.Call(in)...)
+	}
+	if len(results) == 0 {
+		return *new(T), NoSubscribers
+	}
+	if len(results) == 2 {
+		if results[1].Interface() != nil {
+			if results[0].Interface() != nil {
+				return results[0].Interface().(T), results[1].Interface().(error)
+			}
+			return *new(T), results[1].Interface().(error)
+		}
+		return results[0].Interface().(T), nil
+	}
+	return *new(T), errors.New("not implemented")
+}
+
+func getEventName(event any) string {
+	if e, ok := event.(Eventer); ok {
+		return e.EventName()
+	}
+	return getStructName(reflect.TypeOf(event))
+}
+
+func getStructName(t reflect.Type) string {
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+
+	if t.Kind() == reflect.Struct {
+		return t.Name()
+	}
+
+	return ""
 }

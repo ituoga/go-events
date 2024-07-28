@@ -1,5 +1,5 @@
 package events
 
-type Eventer interface {
-	EventName() string
-}
+// type Eventer interface {
+// 	EventName() string
+// }

@@ -77,3 +77,51 @@ func TestPub(t *testing.T) {
 		t.Fatal("event not received")
 	}
 }
+
+func TestRequestReply(t *testing.T) {
+	Subscribe(func(e *ExampleEvent) (any, error) {
+		return &ExampleEvent{}, nil
+	})
+
+	r, err := RequestG[*ExampleEvent](&ExampleEvent{})
+
+	if err != nil {
+		t.Fatal("error not expected")
+	}
+
+	if r.EventName() != "ExampleEvent" {
+		t.Fatal("wrong response")
+	}
+}
+
+func TestRequestReplyWithName(t *testing.T) {
+	Subscribe(func(e *ExampleWithNameEvent) (any, error) {
+		return &ExampleWithNameEvent{Name: "test"}, nil
+	})
+
+	r, err := RequestG[*ExampleWithNameEvent](&ExampleWithNameEvent{})
+
+	if err != nil {
+		t.Fatal("error not expected")
+	}
+
+	if r.Name != "test" {
+		t.Fatal("wrong response")
+	}
+}
+
+func TestRequestReplyError(t *testing.T) {
+	Subscribe(func(e *ExampleWithNameEvent) (any, error) {
+		return &ExampleWithNameEvent{Name: "test"}, errors.New("error")
+	})
+
+	r, err := RequestG[*ExampleWithNameEvent](&ExampleWithNameEvent{})
+
+	if err.Error() != "error" {
+		t.Fatalf("error not expected %v", err)
+	}
+
+	if r.Name != "test" {
+		t.Fatal("wrong response")
+	}
+}

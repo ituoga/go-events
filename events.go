@@ -13,6 +13,10 @@ func init() {
 }
 */
 
+type Eventer interface {
+	EventName() string
+}
+
 var reg = map[string]reflect.Type{}
 
 // Register registers an pointer to event in the registry
@@ -36,11 +40,20 @@ func Get(event string) any {
 	return elm.Interface()
 }
 
-func GetUnmarshal(event string, body []byte) any {
-	evt := Get(event)
+func GetUnmarshal[T any](event Eventer, body []byte) T {
+	evt := Get(event.EventName())
 	err := json.Unmarshal(body, &evt)
 	if err != nil {
 		log.Fatalf("error unmarshalling event: %s", err)
 	}
-	return evt
+	return evt.(T)
 }
+
+// func GetUnmarshal[T any](event string, body []byte) T {
+// 	evt := Get(event)
+// 	err := json.Unmarshal(body, &evt)
+// 	if err != nil {
+// 		log.Fatalf("error unmarshalling event: %s", err)
+// 	}
+// 	return evt.(T)
+// }
