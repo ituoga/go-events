@@ -29,6 +29,22 @@ type localEventv2 struct {
 func (e *localEventv2) EventName() string {
 	return "some.topic.here.v2"
 }
+
+type system struct {
+	Auth string
+	Func string
+	P    []byte
+}
+type localExampleEvent struct {
+	Key   string
+	Value string
+}
+
+type localExampleResponseEvent struct {
+	Key   string
+	Value string
+}
+
 func TestMain(t *testing.T) {
 
 	b, _ := json.Marshal(&localEventv1{"testas"})
@@ -123,5 +139,58 @@ func TestRequestReplyError(t *testing.T) {
 
 	if r.Name != "test" {
 		t.Fatal("wrong response")
+	}
+}
+
+func TestSystem(t *testing.T) {
+	Register[*system]()
+	Register[*localExampleEvent]()
+
+	Subscribe(func(e *localExampleEvent) (any, error) {
+		return &localExampleResponseEvent{Key: "kv1", Value: "val1"}, nil
+	})
+
+	evt := &localExampleEvent{
+		Key: "kv_in", Value: "val_in",
+	}
+	s := &system{
+		Auth: "testauth",
+		Func: getEventName(evt),
+		P:    MustMarshal(evt),
+	}
+	b, _ := json.Marshal(s)
+
+	se := GetUnmarshal[*system](b)
+	if se.Auth != "testauth" {
+		t.Fatal("auth not equals")
+	}
+
+	_rez, err := RequestEvent(se.Func, se.P)
+	if err != nil {
+		t.Fatal("error not expected")
+	}
+
+	rez, ok := _rez.(*localExampleResponseEvent)
+	if !ok {
+		t.Fatal("not expected type")
+	}
+
+	if rez.Key != "kv1" {
+		t.Fatal("key not equals")
+	}
+
+	if rez.Value != "val1" {
+		t.Fatal("value not equals")
+	}
+
+	brez, err := RequestEventBytes(se.Func, se.P)
+	if err != nil {
+		t.Fatal("error not expected")
+	}
+	if string(brez) == "" {
+		t.Fatal("empty response")
+	}
+	if string(brez) != `{"Key":"kv1","Value":"val1"}` {
+		t.Fatal("not expected response")
 	}
 }

@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	NoSubscribers = errors.New("No subscribers for this event")
+	ErrNoSubscribers = errors.New("no subscribers for this event")
 )
 
 var (
@@ -58,21 +58,21 @@ func Subscribe(fn any) {
 }
 
 // Publish publishes an event
-func Publish(event Eventer) error {
-	if _, ok := subscribers[event.EventName()]; !ok {
-		return NoSubscribers
+func Publish(event any) error {
+	if _, ok := subscribers[getEventName(event)]; !ok {
+		return ErrNoSubscribers
 	}
 	if beforePub != nil {
 		b, err := json.Marshal(event)
 		if err != nil {
 			return err
 		}
-		err = beforePub(event.EventName(), b, event)
+		err = beforePub(getEventName(event), b, event)
 		if err != nil {
 			return err
 		}
 	}
-	for _, fn := range subscribers[event.EventName()] {
+	for _, fn := range subscribers[getEventName(event)] {
 		in := make([]reflect.Value, 1)
 		in[0] = reflect.ValueOf(event)
 		results := fn.Call(in)
@@ -85,13 +85,25 @@ func Publish(event Eventer) error {
 	return nil
 }
 
-func Request(event Eventer) (any, error) {
+func RequestEvent(name string, b []byte) (any, error) {
+	return RequestGE[any](name, b)
+}
+
+func RequestEventBytes(name string, b []byte) ([]byte, error) {
+	response, err := RequestGE[any](name, b)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(response)
+}
+
+func Request(event any) (any, error) {
 	return RequestG[any](event)
 }
 
 func RequestG[T any](event any) (T, error) {
 	if _, ok := subscribers[getEventName(event)]; !ok {
-		return *new(T), NoSubscribers
+		return *new(T), ErrNoSubscribers
 	}
 	if beforePub != nil {
 		b, err := json.Marshal(event)
@@ -110,7 +122,44 @@ func RequestG[T any](event any) (T, error) {
 		results = append(results, fn.Call(in)...)
 	}
 	if len(results) == 0 {
-		return *new(T), NoSubscribers
+		return *new(T), ErrNoSubscribers
+	}
+	if len(results) == 2 {
+		if results[1].Interface() != nil {
+			if results[0].Interface() != nil {
+				return results[0].Interface().(T), results[1].Interface().(error)
+			}
+			return *new(T), results[1].Interface().(error)
+		}
+		return results[0].Interface().(T), nil
+	}
+	return *new(T), errors.New("not implemented")
+}
+
+func RequestGE[T any](name string, b []byte) (T, error) {
+	if _, ok := subscribers[name]; !ok {
+		return *new(T), ErrNoSubscribers
+	}
+	// if beforePub != nil {
+	// 	b, err := json.Marshal(event)
+	// 	if err != nil {
+	// 		return *new(T), err
+	// 	}
+	// 	err = beforePub(getEventName(event), b, event)
+	// 	if err != nil {
+	// 		return *new(T), err
+	// 	}
+	// }
+
+	event := Get(name)
+	var results []reflect.Value
+	for _, fn := range subscribers[name] {
+		in := make([]reflect.Value, 1)
+		in[0] = reflect.ValueOf(event)
+		results = append(results, fn.Call(in)...)
+	}
+	if len(results) == 0 {
+		return *new(T), ErrNoSubscribers
 	}
 	if len(results) == 2 {
 		if results[1].Interface() != nil {
