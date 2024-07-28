@@ -140,18 +140,12 @@ func RequestGE[T any](name string, b []byte) (T, error) {
 	if _, ok := subscribers[name]; !ok {
 		return *new(T), ErrNoSubscribers
 	}
-	// if beforePub != nil {
-	// 	b, err := json.Marshal(event)
-	// 	if err != nil {
-	// 		return *new(T), err
-	// 	}
-	// 	err = beforePub(getEventName(event), b, event)
-	// 	if err != nil {
-	// 		return *new(T), err
-	// 	}
-	// }
 
 	event := Get(name)
+	err := json.Unmarshal(b, event)
+	if err != nil {
+		return *new(T), err
+	}
 	var results []reflect.Value
 	for _, fn := range subscribers[name] {
 		in := make([]reflect.Value, 1)
@@ -168,7 +162,10 @@ func RequestGE[T any](name string, b []byte) (T, error) {
 			}
 			return *new(T), results[1].Interface().(error)
 		}
-		return results[0].Interface().(T), nil
+		if results[0].Interface() != nil {
+			return results[0].Interface().(T), nil
+		}
+		return *new(T), nil
 	}
 	return *new(T), errors.New("not implemented")
 }

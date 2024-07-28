@@ -147,6 +147,10 @@ func TestSystem(t *testing.T) {
 	Register[*localExampleEvent]()
 
 	Subscribe(func(e *localExampleEvent) (any, error) {
+		// t.Logf("what? %v", e)
+		if e.Key != "kv_in" && e.Value != "val_in" {
+			t.Fatalf("%v", e)
+		}
 		return &localExampleResponseEvent{Key: "kv1", Value: "val1"}, nil
 	})
 
