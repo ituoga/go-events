@@ -169,22 +169,3 @@ func RequestGE[T any](name string, b []byte) (T, error) {
 	}
 	return *new(T), errors.New("not implemented")
 }
-
-func GetEventName(event any) string {
-	if e, ok := event.(Eventer); ok {
-		return e.EventName()
-	}
-	return getStructName(reflect.TypeOf(event))
-}
-
-func getStructName(t reflect.Type) string {
-	if t.Kind() == reflect.Ptr {
-		t = t.Elem()
-	}
-
-	if t.Kind() == reflect.Struct {
-		return t.Name()
-	}
-
-	return ""
-}
